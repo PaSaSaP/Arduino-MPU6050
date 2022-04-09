@@ -220,6 +220,7 @@ class MPU6050
 	void setAccelOffsetZ(int16_t offset);
 
 	void calibrateGyro(uint8_t samples = 50);
+	void setManualCalibrated();
 	void setThreshold(uint8_t multiple = 1);
 	uint8_t getThreshold(void);
 

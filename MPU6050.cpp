@@ -580,6 +580,11 @@ void MPU6050::calibrateGyro(uint8_t samples)
     }
 }
 
+void MPU6050::setManualCalibrated()
+{
+    useCalibrate = true;
+}
+
 // Get current threshold value
 uint8_t MPU6050::getThreshold(void)
 {
@@ -633,7 +638,6 @@ uint8_t MPU6050::fastRegister8(uint8_t reg)
     #else
 	value = Wire.receive();
     #endif;
-    Wire.endTransmission();
 
     return value;
 }
@@ -653,13 +657,11 @@ uint8_t MPU6050::readRegister8(uint8_t reg)
 
     Wire.beginTransmission(mpuAddress);
     Wire.requestFrom(mpuAddress, 1);
-    while(!Wire.available()) {};
     #if ARDUINO >= 100
 	value = Wire.read();
     #else
 	value = Wire.receive();
     #endif;
-    Wire.endTransmission();
 
     return value;
 }
@@ -692,7 +694,6 @@ int16_t MPU6050::readRegister16(uint8_t reg)
 
     Wire.beginTransmission(mpuAddress);
     Wire.requestFrom(mpuAddress, 2);
-    while(!Wire.available()) {};
     #if ARDUINO >= 100
         uint8_t vha = Wire.read();
         uint8_t vla = Wire.read();
@@ -700,7 +701,6 @@ int16_t MPU6050::readRegister16(uint8_t reg)
         uint8_t vha = Wire.receive();
         uint8_t vla = Wire.receive();
     #endif;
-    Wire.endTransmission();
 
     value = vha << 8 | vla;
 
