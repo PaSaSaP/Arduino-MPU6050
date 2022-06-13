@@ -11,37 +11,49 @@
 
 MPU6050 mpu;
 
-void setup() 
+void setup()
 {
-  Serial.begin(115200);
+  Serial.begin(57600);
 
-  Serial.println("Initialize MPU6050");
-
-  while(!mpu.begin(MPU6050_SCALE_2000DPS, MPU6050_RANGE_2G))
+  while (!mpu.begin(MPU6050_SCALE_2000DPS, MPU6050_RANGE_2G))
   {
     Serial.println("Could not find a valid MPU6050 sensor, check wiring!");
     delay(500);
   }
 }
 
+Vector filtered;
+
 void loop()
 {
-  // Read normalized values 
+  // Read normalized values
   Vector normAccel = mpu.readNormalizeAccel();
 
+  filtered = lowPassFilter(filtered, normAccel, 0.15);
+
   // Calculate Pitch & Roll
-  int pitch = -(atan2(normAccel.XAxis, sqrt(normAccel.YAxis*normAccel.YAxis + normAccel.ZAxis*normAccel.ZAxis))*180.0)/M_PI;
-  int roll = (atan2(normAccel.YAxis, normAccel.ZAxis)*180.0)/M_PI;
+  int pitch = -(atan2(normAccel.XAxis, sqrt(normAccel.YAxis * normAccel.YAxis + normAccel.ZAxis * normAccel.ZAxis)) * 180.0) / M_PI;
+  int roll = (atan2(normAccel.YAxis, normAccel.ZAxis) * 180.0) / M_PI;
+
+  int fpitch = -(atan2(filtered.XAxis, sqrt(filtered.YAxis*filtered.YAxis + filtered.ZAxis*filtered.ZAxis))*180.0)/M_PI;
+  int froll  = (atan2(filtered.YAxis, filtered.ZAxis)*180.0)/M_PI;
 
   // Output
-  Serial.print(" Pitch = ");
   Serial.print(pitch);
-  Serial.print(" Roll = ");
+  Serial.print(":");
   Serial.print(roll);
-  
+  Serial.print(":");
+
+  Serial.print(fpitch);
+  Serial.print(":");
+  Serial.print(froll);
   Serial.println();
-  
-  delay(10);
 }
 
-
+Vector lowPassFilter(Vector f, Vector vector, float alpha)
+{
+  f.XAxis = vector.XAxis * alpha + (f.XAxis * (1.0 - alpha));
+  f.YAxis = vector.YAxis * alpha + (f.YAxis * (1.0 - alpha));
+  f.ZAxis = vector.ZAxis * alpha + (f.ZAxis * (1.0 - alpha));
+  return f;
+}
