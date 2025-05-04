@@ -27,7 +27,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "WProgram.h"
 #endif
 
-#define MPU6050_ADDRESS             (0x68) // 0x69 when AD0 pin to Vcc
+#define MPU6050_NEW_BOARD
+#define MPU6050_ADDRESS (0x68) // 0x69 when AD0 pin to Vcc
 
 #define MPU6050_REG_ACCEL_XOFFS_H     (0x06)
 #define MPU6050_REG_ACCEL_XOFFS_L     (0x07)
@@ -160,6 +161,7 @@ class MPU6050
 
 	bool begin(mpu6050_dps_t scale = MPU6050_SCALE_2000DPS, mpu6050_range_t range = MPU6050_RANGE_2G, int mpua = MPU6050_ADDRESS);
 
+	void resetOffsets();
 	void setClockSource(mpu6050_clockSource_t source);
 	void setScale(mpu6050_dps_t scale);
 	void setRange(mpu6050_range_t range);
@@ -219,8 +221,8 @@ class MPU6050
 	int16_t getAccelOffsetZ(void);
 	void setAccelOffsetZ(int16_t offset);
 
-	void calibrateGyro(uint8_t samples = 50);
-	void setManualCalibrated();
+	Vector calibrateGyro(uint8_t samples = 50);
+	void setManualCalibrated(float threshold = 0.f);
 	void setThreshold(uint8_t multiple = 1);
 	uint8_t getThreshold(void);
 
@@ -231,10 +233,14 @@ class MPU6050
 	Vector readNormalizeAccel(void);
 	Vector readScaledAccel(void);
 
+	Vector const& getRawAccel(void) const;
+	Vector const& getRawGyro(void) const;
+
     private:
 	Vector ra, rg; // Raw vectors
 	Vector na, ng; // Normalized vectors
 	Vector tg, dg; // Threshold and Delta for Gyro
+	Vector da; // Delta for Accel
 	Vector th;     // Threshold
 	Activites a;   // Activities
 	

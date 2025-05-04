@@ -29,14 +29,33 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <MPU6050.h>
 
+#ifdef MPU6050_NEW_BOARD
+// scaling by registers has no effect in reading raw values
+#define BOARD_WHOAMI (0x98) // ICM-20689
+#else
+#define BOARD_WHOAMI (0x68) // legit MPU6050
+#endif
+
+static void check(char const* str, int registry) {
+    Wire.beginTransmission(MPU6050_ADDRESS);
+    Wire.write(registry);
+    Wire.endTransmission();
+    Wire.requestFrom(MPU6050_ADDRESS,1);
+    auto v = Wire.read();
+    printf("%s=0x%X, %d\n", str, v, v);
+}
+
 bool MPU6050::begin(mpu6050_dps_t scale, mpu6050_range_t range, int mpua)
 {
     // Set Address
     mpuAddress = mpua;
 
-    Wire.begin();
+    // Wire.begin();
 
     // Reset calibrate values
+    da.XAxis = 0;
+    da.YAxis = 0;
+    da.ZAxis = 0;
     dg.XAxis = 0;
     dg.YAxis = 0;
     dg.ZAxis = 0;
@@ -48,8 +67,11 @@ bool MPU6050::begin(mpu6050_dps_t scale, mpu6050_range_t range, int mpua)
     tg.ZAxis = 0;
     actualThreshold = 0;
 
+    check("MPU reg", MPU6050_REG_WHO_AM_I);
     // Check MPU6050 Who Am I Register
-    if (fastRegister8(MPU6050_REG_WHO_AM_I) != 0x68)
+    // old board, MPU6050, scaling in registers
+    // or new board, ICM-20689 (deployed in project)
+    if (fastRegister8(MPU6050_REG_WHO_AM_I) != BOARD_WHOAMI)
     {
 	return false;
     }
@@ -157,6 +179,11 @@ void MPU6050::setDLPFMode(mpu6050_dlpf_t dlpf)
     value &= 0b11111000;
     value |= dlpf;
     writeRegister8(MPU6050_REG_CONFIG, value);
+}
+
+void MPU6050::resetOffsets() {
+    da = {};
+    dg = {};
 }
 
 void MPU6050::setClockSource(mpu6050_clockSource_t source)
@@ -382,6 +409,10 @@ Vector MPU6050::readNormalizeAccel(void)
 {
     readRawAccel();
 
+    ra.XAxis -= (int16_t)da.XAxis;
+    ra.YAxis -= (int16_t)da.YAxis;
+    ra.ZAxis -= (int16_t)da.ZAxis;
+
     na.XAxis = ra.XAxis * rangePerDigit * 9.80665f;
     na.YAxis = ra.YAxis * rangePerDigit * 9.80665f;
     na.ZAxis = ra.ZAxis * rangePerDigit * 9.80665f;
@@ -393,6 +424,10 @@ Vector MPU6050::readScaledAccel(void)
 {
     readRawAccel();
 
+    ra.XAxis -= (int16_t)da.XAxis;
+    ra.YAxis -= (int16_t)da.YAxis;
+    ra.ZAxis -= (int16_t)da.ZAxis;
+
     na.XAxis = ra.XAxis * rangePerDigit;
     na.YAxis = ra.YAxis * rangePerDigit;
     na.ZAxis = ra.ZAxis * rangePerDigit;
@@ -400,6 +435,15 @@ Vector MPU6050::readScaledAccel(void)
     return na;
 }
 
+Vector const& MPU6050::getRawAccel(void) const
+{
+    return ra;
+}
+
+Vector const& MPU6050::getRawGyro(void) const
+{
+    return rg;
+}
 
 Vector MPU6050::readRawGyro(void)
 {
@@ -417,7 +461,7 @@ Vector MPU6050::readRawGyro(void)
     #if ARDUINO >= 100
 	uint8_t xha = Wire.read();
 	uint8_t xla = Wire.read();
-        uint8_t yha = Wire.read();
+    uint8_t yha = Wire.read();
 	uint8_t yla = Wire.read();
 	uint8_t zha = Wire.read();
 	uint8_t zla = Wire.read();
@@ -472,66 +516,78 @@ float MPU6050::readTemperature(void)
 
 int16_t MPU6050::getGyroOffsetX(void)
 {
-    return readRegister16(MPU6050_REG_GYRO_XOFFS_H);
+    return dg.XAxis;
+    // return readRegister16(MPU6050_REG_GYRO_XOFFS_H);
 }
 
 int16_t MPU6050::getGyroOffsetY(void)
 {
-    return readRegister16(MPU6050_REG_GYRO_YOFFS_H);
+    return dg.YAxis;
+    // return readRegister16(MPU6050_REG_GYRO_YOFFS_H);
 }
 
 int16_t MPU6050::getGyroOffsetZ(void)
 {
-    return readRegister16(MPU6050_REG_GYRO_ZOFFS_H);
+    return dg.ZAxis;
+    // return readRegister16(MPU6050_REG_GYRO_ZOFFS_H);
 }
 
 void MPU6050::setGyroOffsetX(int16_t offset)
 {
-    writeRegister16(MPU6050_REG_GYRO_XOFFS_H, offset);
+    dg.XAxis = offset;
+    writeRegister16(MPU6050_REG_GYRO_XOFFS_H, 0); // don't know how to use it for mpu6050
 }
 
 void MPU6050::setGyroOffsetY(int16_t offset)
 {
-    writeRegister16(MPU6050_REG_GYRO_YOFFS_H, offset);
+    dg.YAxis = offset;
+    writeRegister16(MPU6050_REG_GYRO_YOFFS_H, 0);
 }
 
 void MPU6050::setGyroOffsetZ(int16_t offset)
 {
-    writeRegister16(MPU6050_REG_GYRO_ZOFFS_H, offset);
+    dg.ZAxis = offset;
+    writeRegister16(MPU6050_REG_GYRO_ZOFFS_H, 0);
 }
 
 int16_t MPU6050::getAccelOffsetX(void)
 {
-    return readRegister16(MPU6050_REG_ACCEL_XOFFS_H);
+    return da.XAxis;
+    // return readRegister16(MPU6050_REG_ACCEL_XOFFS_H);
 }
 
 int16_t MPU6050::getAccelOffsetY(void)
 {
-    return readRegister16(MPU6050_REG_ACCEL_YOFFS_H);
+    return da.YAxis;
+    // return readRegister16(MPU6050_REG_ACCEL_YOFFS_H);
 }
 
 int16_t MPU6050::getAccelOffsetZ(void)
 {
-    return readRegister16(MPU6050_REG_ACCEL_ZOFFS_H);
+    return da.ZAxis;
+    // return readRegister16(MPU6050_REG_ACCEL_ZOFFS_H);
 }
 
 void MPU6050::setAccelOffsetX(int16_t offset)
 {
-    writeRegister16(MPU6050_REG_ACCEL_XOFFS_H, offset);
+    da.XAxis = offset;
+    writeRegister16(MPU6050_REG_ACCEL_XOFFS_H, 0);
 }
 
 void MPU6050::setAccelOffsetY(int16_t offset)
 {
-    writeRegister16(MPU6050_REG_ACCEL_YOFFS_H, offset);
+    da.YAxis = offset;
+    writeRegister16(MPU6050_REG_ACCEL_YOFFS_H, 0);
 }
 
 void MPU6050::setAccelOffsetZ(int16_t offset)
 {
-    writeRegister16(MPU6050_REG_ACCEL_ZOFFS_H, offset);
+    da.ZAxis = offset;
+    writeRegister16(MPU6050_REG_ACCEL_ZOFFS_H, 0);
 }
 
 // Calibrate algorithm
-void MPU6050::calibrateGyro(uint8_t samples)
+Vector MPU6050::calibrateGyro(uint8_t samples)
 {
     // Set calibrate
     useCalibrate = true;
@@ -574,11 +630,18 @@ void MPU6050::calibrateGyro(uint8_t samples)
     {
 	setThreshold(actualThreshold);
     }
+    
+    return dg;
 }
 
-void MPU6050::setManualCalibrated()
+void MPU6050::setManualCalibrated(float threshold)
 {
     useCalibrate = true;
+    if (threshold > 0) {
+        tg.XAxis = threshold;
+        tg.YAxis = threshold;
+        tg.ZAxis = threshold;
+    }
 }
 
 // Get current threshold value

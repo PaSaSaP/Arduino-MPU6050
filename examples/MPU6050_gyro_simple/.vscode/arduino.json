@@ -1,0 +1,6 @@
+{
+    "configuration": "cpu=8MHzatmega328",
+    "board": "arduino:avr:pro",
+    "sketch": "MPU6050_gyro_simple.ino",
+    "port": "COM15"
+}

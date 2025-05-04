@@ -9,6 +9,15 @@
 #include <Wire.h>
 #include <MPU6050.h>
 
+// original offsets: 
+//  * Accelerometer offsets: 6400 / 1028 / 1
+
+int const accelOffsetX = 1;
+int const accelOffsetY = -900;
+int const accelOffsetZ = -1050;
+
+// in ursus mpu, -z is forward, +y is right, -x is top
+
 MPU6050 mpu;
 
 void setup() 
@@ -24,9 +33,9 @@ void setup()
   }
 
   // If you want, you can set accelerometer offsets
-  // mpu.setAccelOffsetX();
-  // mpu.setAccelOffsetY();
-  // mpu.setAccelOffsetZ();
+  mpu.setAccelOffsetX(accelOffsetX);
+  mpu.setAccelOffsetY(accelOffsetY);
+  mpu.setAccelOffsetZ(accelOffsetZ);
   
   checkSettings();
 }

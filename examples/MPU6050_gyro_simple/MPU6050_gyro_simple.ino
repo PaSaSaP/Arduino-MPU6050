@@ -11,26 +11,45 @@
 
 MPU6050 mpu;
 
+// deployed
+int const gyroOffsetX = 123;
+int const gyroOffsetY = 676;
+int const gyroOffsetZ = 268;
+
+// legit mpu6050, old board
+// int const gyroOffsetX = 892;
+// int const gyroOffsetY = 164;
+// int const gyroOffsetZ = 380;
+
 void setup() 
 {
-  Serial.begin(115200);
+  Serial.begin(57600);
 
   // Initialize MPU6050
   Serial.println("Initialize MPU6050");
-  while(!mpu.begin(MPU6050_SCALE_2000DPS, MPU6050_RANGE_2G))
+  while(!mpu.begin(MPU6050_SCALE_250DPS, MPU6050_RANGE_2G))
   {
     Serial.println("Could not find a valid MPU6050 sensor, check wiring!");
     delay(500);
   }
   
   // If you want, you can set gyroscope offsets
-  // mpu.setGyroOffsetX(155);
-  // mpu.setGyroOffsetY(15);
-  // mpu.setGyroOffsetZ(15);
+  mpu.setGyroOffsetX(gyroOffsetX);
+  mpu.setGyroOffsetY(gyroOffsetY);
+  mpu.setGyroOffsetZ(gyroOffsetZ);
   
   // Calibrate gyroscope. The calibration must be at rest.
   // If you don't want calibrate, comment this line.
-  mpu.calibrateGyro();
+  auto calibgyro = mpu.calibrateGyro(0xFF);
+
+    Serial.print(" * Gyroscope calc offsets: ");
+    Serial.print(calibgyro.XAxis);
+    Serial.print(" / ");
+    Serial.print(calibgyro.YAxis);
+    Serial.print(" / ");
+    Serial.println(calibgyro.ZAxis);
+
+    for(;;);
 
   // Set threshold sensivty. Default 3.
   // If you don't want use threshold, comment this line or set 0.
